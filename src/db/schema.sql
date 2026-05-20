@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   display_name TEXT,
   role TEXT DEFAULT 'agent',
   description TEXT,
+  persona TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS threads (
   topic TEXT NOT NULL,
   description TEXT,
   participants TEXT NOT NULL,
+  workspace TEXT,
   status TEXT DEFAULT 'open',
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
@@ -29,3 +31,25 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id, created_at);
+
+CREATE TABLE IF NOT EXISTS agent_endpoints (
+  id TEXT PRIMARY KEY,
+  mcp_url TEXT NOT NULL,
+  display_name TEXT,
+  status TEXT DEFAULT 'active',
+  capabilities TEXT DEFAULT '{}',
+  tools TEXT DEFAULT '[]',
+  last_connected_at TEXT,
+  last_error TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS local_agents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  exe_path TEXT,
+  config_dir TEXT,
+  models TEXT DEFAULT '[]',
+  detected_at TEXT DEFAULT (datetime('now'))
+);

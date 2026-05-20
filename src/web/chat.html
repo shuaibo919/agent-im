@@ -6,6 +6,7 @@
   <title>Agent IM</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='4' width='26' height='20' rx='5' fill='%2300e5a0'/%3E%3Cpolygon points='10,24 16,24 10,30' fill='%2300e5a0'/%3E%3Crect x='11' y='11' width='2.5' height='6' rx='1.25' fill='%230a0a0f'/%3E%3Crect x='18.5' y='11' width='2.5' height='6' rx='1.25' fill='%230a0a0f'/%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -33,7 +34,7 @@
   </script>
   <style>
     * { box-sizing: border-box; }
-    body { background: #0a0a0f; color: #e5e7eb; font-family: 'Inter', sans-serif; margin: 0; }
+    body { background: #0a0a0f; color: #e5e7eb; font-family: 'Inter', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif; margin: 0; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 3px; }
@@ -44,6 +45,28 @@
     .msg-card .msg-expand { display: flex; }
     .msg-card.expanded .msg-expand svg { transform: rotate(180deg); }
     .msg-card.no-overflow .msg-expand { display: none; }
+    .msg-content img { max-width: 320px; max-height: 256px; border-radius: 8px; border: 1px solid #1e1e2e; margin: 4px 0; cursor: pointer; display: block; }
+    .msg-content a { color: #00e5a0; text-decoration: underline; text-underline-offset: 2px; }
+    .msg-content a:hover { color: #00cc8e; }
+    .msg-content p { margin: 0.25em 0; }
+    .msg-content p:first-child { margin-top: 0; }
+    .msg-content p:last-child { margin-bottom: 0; }
+    .msg-content ul, .msg-content ol { margin: 0.25em 0; padding-left: 1.5em; }
+    .msg-content li { margin: 0.15em 0; }
+    .msg-content h1, .msg-content h2, .msg-content h3 { margin: 0.5em 0 0.25em; font-weight: 600; }
+    .msg-content h1 { font-size: 1.15em; }
+    .msg-content h2 { font-size: 1.05em; }
+    .msg-content h3 { font-size: 1em; }
+    .msg-content pre { background: #0d0d14; border: 1px solid #1e1e2e; border-radius: 6px; padding: 0.5em 0.75em; overflow-x: auto; margin: 0.4em 0; font-size: 0.85em; }
+    .msg-content code { background: #1a1a2e; padding: 0.15em 0.35em; border-radius: 3px; font-size: 0.9em; font-family: 'IBM Plex Mono', monospace; }
+    .msg-content pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+    .msg-content blockquote { border-left: 3px solid #00e5a0; margin: 0.4em 0; padding: 0.25em 0.75em; color: #9ca3af; }
+    .msg-content hr { border: none; border-top: 1px solid #1e1e2e; margin: 0.5em 0; }
+    .msg-content strong { font-weight: 600; }
+    .msg-content table { border-collapse: collapse; margin: 0.4em 0; font-size: 0.9em; }
+    .msg-content th, .msg-content td { border: 1px solid #1e1e2e; padding: 0.3em 0.6em; }
+    .msg-content th { background: #0d0d14; font-weight: 600; }
+    #image-preview-bar img { max-height: 48px; border-radius: 4px; }
   </style>
 </head>
 <body class="h-screen overflow-hidden">
@@ -71,10 +94,6 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Profiles
         </button>
-        <button onclick="document.getElementById('logout-modal').classList.remove('hidden')" class="px-4 py-3 text-xs font-medium text-muted hover:text-red-400 transition-colors border-t-2 border-transparent -mt-px flex flex-col items-center gap-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Logout
-        </button>
       </div>
     </div>
 
@@ -89,6 +108,8 @@
         <div class="flex items-center gap-2">
           <span id="msg-status-badge" class="text-xs px-2 py-0.5 rounded-full border border-border hidden"></span>
           <button id="close-thread-btn" class="text-xs text-muted hover:text-red-400 transition-colors hidden">Close</button>
+          <button id="reopen-thread-btn" class="text-xs text-muted hover:text-green-400 transition-colors hidden">Reopen</button>
+          <button id="delete-thread-btn" class="text-xs text-muted hover:text-red-400 transition-colors hidden">Delete</button>
           <button id="toggle-detail-btn" class="text-muted hover:text-text-primary transition-colors hidden" onclick="toggleDetailPanel()" title="Thread details">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
           </button>
@@ -105,11 +126,25 @@
         <button onclick="clearReply()" class="text-muted hover:text-text-primary">&times;</button>
       </div>
       <div id="input-area" class="p-4 border-t border-border hidden">
-        <div class="flex gap-2">
-          <input id="sender-input" type="text" placeholder="Your name" value="kane" class="w-28 bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent font-mono" />
-          <input id="message-input" type="text" placeholder="Type a message..." class="flex-1 bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent" />
+        <div id="image-preview-bar" class="hidden flex items-center gap-2 mb-2 px-1">
+          <img id="image-preview-thumb" src="" alt="preview" />
+          <div class="flex-1 min-w-0">
+            <div id="image-preview-name" class="text-xs text-text-primary truncate"></div>
+            <div id="image-preview-size" class="text-xs text-muted"></div>
+          </div>
+          <button onclick="clearStagedImage()" class="text-muted hover:text-red-400 text-lg leading-none">&times;</button>
+        </div>
+        <input type="file" id="image-file-input" accept="image/*" class="hidden" />
+        <div class="relative">
+          <div class="flex gap-2">
+            <input id="sender-input" type="text" placeholder="Your name" value="user" class="w-28 bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent font-mono" />
+            <input id="message-input" type="text" placeholder="Type a message... (@ to mention)" class="flex-1 bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent" />
+          <button id="attach-btn" onclick="document.getElementById('image-file-input').click()" class="bg-panel border border-border rounded-lg px-3 py-2 text-muted hover:text-accent hover:border-accent transition-colors" title="Attach image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </button>
           <button id="send-btn" class="bg-accent text-bg px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors">Send</button>
         </div>
+          <div id="mention-dropdown" class="absolute left-0 right-0 bottom-full mb-1 bg-panel border border-border rounded-lg max-h-40 overflow-y-auto z-20 hidden"></div>
       </div>
     </div>
 
@@ -129,6 +164,7 @@
             <span id="detail-created" class="text-xs text-muted"></span>
           </div>
         </div>
+        <!-- Workspace -->
         <!-- Participants -->
         <div class="p-4">
           <h3 class="text-xs text-muted uppercase tracking-wide mb-2">Participants</h3>
@@ -185,34 +221,43 @@
     </div>
   </div>
 
-  <!-- Logout Modal -->
-  <div id="logout-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-    <div class="bg-panel border border-border rounded-lg p-6 w-80 shadow-2xl">
-      <h2 class="text-lg font-semibold mb-2">Logout</h2>
-      <p class="text-sm text-text-secondary mb-4">Are you sure you want to logout?</p>
-      <div class="flex gap-2 justify-end">
-        <button onclick="document.getElementById('logout-modal').classList.add('hidden')" class="text-sm text-muted hover:text-text-primary px-3 py-2">Cancel</button>
-        <form method="POST" action="/chat/logout" class="inline">
-          <button type="submit" class="bg-red-500/80 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-500 transition-colors">Logout</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!-- Profile Modal -->
   <div id="profile-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-    <div class="bg-panel border border-border rounded-lg p-6 w-96 shadow-2xl">
+    <div class="bg-panel border border-border rounded-lg p-6 w-[480px] shadow-2xl max-h-[90vh] overflow-y-auto">
       <h2 id="pm-title" class="text-lg font-semibold mb-4">Add Profile</h2>
+
+      <!-- Agent Presets -->
+      <div id="pm-presets" class="mb-4">
+        <label class="text-xs text-muted mb-2 block">Quick Add — Local Agents</label>
+        <div id="pm-preset-list" class="grid grid-cols-2 gap-2"></div>
+      </div>
+
+      <div class="border-t border-border my-4 relative">
+        <span class="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-panel px-2 text-xs text-muted">or manually</span>
+      </div>
+
       <input id="pm-id" type="text" placeholder="ID (e.g. claude-code)" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 font-mono" />
       <input id="pm-display-name" type="text" placeholder="Display name" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
       <select id="pm-role" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 appearance-none">
         <option value="agent">Agent</option>
         <option value="human">Human</option>
       </select>
-      <input id="pm-description" type="text" placeholder="Description (optional)" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-4" />
-      <div class="flex gap-2 justify-end">
-        <button id="pm-cancel" class="text-sm text-muted hover:text-text-primary px-3 py-2">Cancel</button>
-        <button id="pm-save" class="bg-accent text-bg px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors">Save</button>
+
+      <!-- Model config (shown when agent type selected) -->
+      <div id="pm-model-section" class="hidden mb-3">
+        <label class="text-xs text-muted mb-1.5 block">Model Configuration</label>
+        <select id="pm-model" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent appearance-none">
+        </select>
+      </div>
+
+      <input id="pm-description" type="text" placeholder="Description (optional)" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
+      <textarea id="pm-persona" placeholder="Persona / System Prompt (optional)" rows="3" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-4 resize-y"></textarea>
+      <div class="flex gap-2 justify-between">
+        <button id="pm-delete" class="text-sm text-red-400 hover:text-red-300 px-3 py-2 hidden">Delete</button>
+        <div class="flex gap-2">
+          <button id="pm-cancel" class="text-sm text-muted hover:text-text-primary px-3 py-2">Cancel</button>
+          <button id="pm-save" class="bg-accent text-bg px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors">Save</button>
+        </div>
       </div>
     </div>
   </div>
@@ -266,6 +311,38 @@ function escapeHtml(str) {
   return div.innerHTML
 }
 
+/** Render message content — parse markdown via marked, with image/link support */
+function renderContent(raw) {
+  // Step 1: Extract data-URI images BEFORE markdown parsing (marked doesn't handle huge data URIs well)
+  const imagePlaceholders = []
+  let processed = raw.replace(/!\[([^\]]*)\]\((data:image\/[^\s)]+)\)/g, (match, alt, url) => {
+    const token = `__IMG_${imagePlaceholders.length}__`
+    imagePlaceholders.push({ alt, url })
+    return token
+  })
+
+  // Step 2: parse markdown → HTML via marked (handles bold, italic, code, lists, headers, etc.)
+  let s = marked.parse(processed, { breaks: true, gfm: true })
+
+  // Step 3: restore data-URI image placeholders as <img> tags
+  for (let i = 0; i < imagePlaceholders.length; i++) {
+    const { alt, url } = imagePlaceholders[i]
+    const safeAlt = escapeHtml(alt)
+    s = s.replaceAll(`__IMG_${i}__`, `<img src="${url}" alt="${safeAlt}" loading="lazy" onclick="window.open(this.src,'_blank')" />`)
+  }
+
+  // Step 4: make all links open in new tab
+  s = s.replace(/<a /g, '<a target="_blank" rel="noopener" ')
+  return s
+}
+
+/** Summarize content for reply previews — replace images with [Image] */
+function summarizeContent(raw, maxLen) {
+  let s = raw.replace(/!\[[^\]]*\]\(data:image\/[^)]+\)/g, '[Image]')
+  s = s.replace(/!\[[^\]]*\]\(https?:\/\/[^)]+\)/g, '[Image]')
+  return s.slice(0, maxLen || 80)
+}
+
 /** Parse participants JSON — compatible with ["a"] and [{"id":"a","role":"x"}] */
 function parseParticipants(raw) {
   const arr = JSON.parse(raw)
@@ -302,7 +379,7 @@ window.switchTab = switchTab
 // --- Threads ---
 async function loadThreads() {
   try {
-    const sender = document.getElementById('sender-input').value.trim() || 'kane'
+    const sender = document.getElementById('sender-input').value.trim() || 'user'
     const data = await api('GET', `/api/threads?profile_id=${encodeURIComponent(sender)}&include_closed=true&include_all=true`)
     cachedThreads = data.threads || []
     renderThreads(cachedThreads)
@@ -345,15 +422,139 @@ function renderProfiles(profiles) {
   list.innerHTML = profiles.map(p => {
     const color = senderColor(p.id)
     const roleClass = p.role === 'human' ? 'bg-blue-500/20 text-blue-400' : 'bg-accent/20 text-accent'
+    const modelMatch = p.description && p.description.match(/^model:\s*(.+)$/)
+    const modelBadge = modelMatch ? `<span class="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 ml-1">${escapeHtml(modelMatch[1])}</span>` : ''
+    // Detect agent type icon
+    const preset = AGENT_PRESETS.find(pr => p.id === pr.id || p.id.startsWith(pr.id + '-'))
+    const icon = preset ? preset.icon : ''
     return `<div class="p-3 mx-2 my-1 rounded-lg cursor-pointer hover:bg-border/30 transition-colors" onclick="openProfileModal('${escapeHtml(p.id)}')">
       <div class="flex items-center justify-between mb-1">
-        <span class="text-sm font-medium font-mono" style="color:${color}">${escapeHtml(p.id)}</span>
+        <span class="text-sm font-medium font-mono" style="color:${color}">${icon ? icon + ' ' : ''}${escapeHtml(p.id)}</span>
         <span class="text-xs px-1.5 py-0.5 rounded ${roleClass}">${p.role}</span>
       </div>
-      ${p.display_name && p.display_name !== p.id ? `<div class="text-xs text-text-secondary">${escapeHtml(p.display_name)}</div>` : ''}
-      ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
+      ${p.display_name && p.display_name !== p.id ? `<div class="text-xs text-text-secondary">${escapeHtml(p.display_name)}${modelBadge}</div>` : (modelBadge ? `<div class="text-xs">${modelBadge}</div>` : '')}
+      ${p.description && !modelMatch ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
     </div>`
   }).join('')
+}
+
+// --- Agent Presets & Models ---
+const AGENT_PRESETS = [
+  { id: 'claude-code', name: 'Claude Code', icon: '🤖', color: '#d97706', models: [] },
+  { id: 'codex', name: 'Codex (OpenAI)', icon: '🧠', color: '#10b981', models: [] },
+  { id: 'gemini-cli', name: 'Gemini CLI', icon: '💎', color: '#3b82f6', models: [] },
+  { id: 'custom-agent', name: 'Custom Agent', icon: '⚙️', color: '#6b7280', models: [] },
+]
+
+let selectedPreset = null
+let detectedAgents = [] // fetched from /api/agents/local
+
+async function fetchDetectedAgents() {
+  try {
+    const data = await api('GET', '/api/agents/local')
+    detectedAgents = (data.agents || []).map(a => ({
+      ...a,
+      models: typeof a.models === 'string' ? JSON.parse(a.models) : a.models
+    }))
+  } catch { detectedAgents = [] }
+}
+
+function renderPresetList() {
+  const container = document.getElementById('pm-preset-list')
+  const existingIds = allProfiles.map(p => p.id)
+
+  // Show detected local agents only (no fallback to hardcoded presets)
+  const agentsToShow = detectedAgents.length > 0 ? detectedAgents : []
+
+  let html = agentsToShow.map(agent => {
+    const preset = AGENT_PRESETS.find(p => p.id === agent.id) || { icon: '🤖' }
+    const variants = existingIds.filter(id => id === agent.id || id.startsWith(agent.id + '-'))
+    const activeModel = (agent.models || []).find(m => m.active)
+    const pathInfo = agent.exe_path || agent.config_dir || ''
+    return `<button class="flex items-center gap-2 p-2.5 rounded-lg border border-accent/30 bg-accent/5 hover:border-accent/50 hover:bg-border/30 transition-all text-left group" onclick="selectPreset('${agent.id}')">
+      <span class="text-lg">${preset.icon || '🤖'}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate">${agent.name} <span class="text-xs text-accent">● local</span></div>
+        <div class="text-xs text-muted truncate" title="${escapeHtml(pathInfo)}">${pathInfo}</div>
+        ${activeModel ? `<div class="text-xs text-purple-400 mt-0.5">active: ${escapeHtml(activeModel.value)}</div>` : ''}
+      </div>
+      ${variants.length ? `<span class="text-xs text-accent">${variants.length} added</span>` : ''}
+    </button>`
+  }).join('')
+
+  if (!html) {
+    html = '<div class="col-span-2 text-center text-muted text-xs py-3">No local agents detected.<br>Run <code class="bg-border/50 px-1 rounded">pnpm detect</code> to scan.</div>'
+  }
+
+  // Always add custom agent option
+  html += `<button class="flex items-center gap-2 p-2.5 rounded-lg border border-border hover:border-accent/50 hover:bg-border/30 transition-all text-left" onclick="selectPreset('custom-agent')">
+    <span class="text-lg">⚙️</span>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-medium">Custom Agent</div>
+      <div class="text-xs text-muted">manual config</div>
+    </div>
+  </button>`
+
+  container.innerHTML = html
+}
+
+function selectPreset(presetId) {
+  const preset = AGENT_PRESETS.find(p => p.id === presetId)
+  const detected = detectedAgents.find(a => a.id === presetId)
+  const agent = detected || preset
+  if (!agent) return
+  selectedPreset = { ...agent, models: agent.models || (preset ? preset.models : []) }
+  if (typeof selectedPreset.models === 'string') selectedPreset.models = JSON.parse(selectedPreset.models)
+
+  const idInput = document.getElementById('pm-id')
+  const nameInput = document.getElementById('pm-display-name')
+  const roleSelect = document.getElementById('pm-role')
+  const modelSection = document.getElementById('pm-model-section')
+  const modelSelect = document.getElementById('pm-model')
+
+  if (presetId === 'custom-agent') {
+    idInput.value = ''
+    nameInput.value = ''
+    idInput.readOnly = false
+    idInput.classList.remove('opacity-50')
+    modelSection.classList.add('hidden')
+    return
+  }
+
+  roleSelect.value = 'agent'
+
+  // Populate model dropdown
+  if (selectedPreset.models && selectedPreset.models.length) {
+    modelSelect.innerHTML = selectedPreset.models.map(m =>
+      `<option value="${m.value}">${m.label}</option>`
+    ).join('')
+    modelSection.classList.remove('hidden')
+    updatePresetId()
+    modelSelect.onchange = updatePresetId
+  } else {
+    modelSection.classList.add('hidden')
+    idInput.value = agent.id
+    nameInput.value = agent.name
+  }
+  idInput.readOnly = false
+  idInput.classList.remove('opacity-50')
+}
+window.selectPreset = selectPreset
+
+function updatePresetId() {
+  if (!selectedPreset || !selectedPreset.models.length) return
+  const modelSelect = document.getElementById('pm-model')
+  const selectedModel = modelSelect.value
+  const modelInfo = selectedPreset.models.find(m => m.value === selectedModel)
+  const modelLabel = modelInfo ? modelInfo.label : selectedModel
+
+  // Generate unique ID: agent-id-modelname (e.g. claude-code-opus4)
+  const modelSlug = modelLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+  const profileId = `${selectedPreset.id}-${modelSlug}`
+
+  document.getElementById('pm-id').value = profileId
+  document.getElementById('pm-display-name').value = `${selectedPreset.name} (${modelLabel})`
+  document.getElementById('pm-description').value = `model: ${selectedModel}`
 }
 
 // --- Profile Modal ---
@@ -361,18 +562,52 @@ function openProfileModal(editId) {
   const modal = document.getElementById('profile-modal')
   const idInput = document.getElementById('pm-id')
   const nameInput = document.getElementById('pm-display-name')
+  const presetsSection = document.getElementById('pm-presets')
+  const modelSection = document.getElementById('pm-model-section')
+  selectedPreset = null
+  modelSection.classList.add('hidden')
   if (editId) {
+    presetsSection.classList.add('hidden')
+    document.getElementById('pm-title').textContent = 'Edit Profile'
     const p = allProfiles.find(x => x.id === editId)
     if (!p) return
-    document.getElementById('pm-title').textContent = 'Edit Profile'
     idInput.value = p.id; idInput.readOnly = true; idInput.classList.add('opacity-50')
     nameInput.value = p.display_name || ''
     document.getElementById('pm-role').value = p.role || 'agent'
     document.getElementById('pm-description').value = p.description || ''
+    document.getElementById('pm-persona').value = p.persona || ''
+    // Show model section if description contains model info
+    if (p.description && p.description.startsWith('model: ')) {
+      const currentModel = p.description.replace('model: ', '')
+      const matchingPreset = AGENT_PRESETS.find(pr => p.id.startsWith(pr.id))
+      if (matchingPreset && matchingPreset.models.length) {
+        selectedPreset = matchingPreset
+        const modelSelect = document.getElementById('pm-model')
+        modelSelect.innerHTML = matchingPreset.models.map(m =>
+          `<option value="${m.value}" ${m.value === currentModel ? 'selected' : ''}>${m.label}</option>`
+        ).join('')
+        modelSection.classList.remove('hidden')
+        modelSelect.onchange = updatePresetId
+      }
+    }
+    // Show delete button
+    document.getElementById('pm-delete').classList.remove('hidden')
+    document.getElementById('pm-delete').onclick = async () => {
+      if (!confirm(`Delete profile "${p.id}"?`)) return
+      try {
+        await api('DELETE', `/api/profiles/${encodeURIComponent(p.id)}`)
+        document.getElementById('profile-modal').classList.add('hidden')
+        await loadProfiles()
+      } catch (e) { console.error('Failed to delete profile:', e) }
+    }
   } else {
+    presetsSection.classList.remove('hidden')
     document.getElementById('pm-title').textContent = 'Add Profile'
     idInput.value = ''; idInput.readOnly = false; idInput.classList.remove('opacity-50')
-    nameInput.value = ''; document.getElementById('pm-role').value = 'agent'; document.getElementById('pm-description').value = ''
+    nameInput.value = ''; document.getElementById('pm-role').value = 'agent'; document.getElementById('pm-description').value = ''; document.getElementById('pm-persona').value = ''
+    document.getElementById('pm-delete').classList.add('hidden')
+    // Fetch detected agents then render
+    fetchDetectedAgents().then(() => renderPresetList())
   }
   modal.classList.remove('hidden')
   editId ? nameInput.focus() : idInput.focus()
@@ -383,7 +618,7 @@ document.getElementById('pm-save').onclick = async () => {
   const id = document.getElementById('pm-id').value.trim()
   if (!id) return
   try {
-    await api('POST', '/api/profiles', { id, display_name: document.getElementById('pm-display-name').value.trim() || id, role: document.getElementById('pm-role').value, description: document.getElementById('pm-description').value.trim() || null })
+    await api('POST', '/api/profiles', { id, display_name: document.getElementById('pm-display-name').value.trim() || id, role: document.getElementById('pm-role').value, description: document.getElementById('pm-description').value.trim() || null, persona: document.getElementById('pm-persona').value.trim() || null })
     document.getElementById('profile-modal').classList.add('hidden')
     await loadProfiles()
   } catch (e) { console.error('Failed to save profile:', e) }
@@ -398,7 +633,7 @@ function toggleDetailPanel() {
 }
 window.toggleDetailPanel = toggleDetailPanel
 
-function renderDetailPanel() {
+async function renderDetailPanel() {
   const thread = cachedThreads.find(t => t.id === currentThreadId)
   if (!thread) return
   document.getElementById('detail-topic').textContent = `#${thread.id} · ${thread.topic}`
@@ -410,12 +645,35 @@ function renderDetailPanel() {
   statusEl.className = `text-xs px-2 py-0.5 rounded-full border ${thread.status === 'open' ? 'border-accent text-accent' : 'border-red-400 text-red-400'}`
   document.getElementById('detail-created').textContent = timeAgo(thread.created_at)
 
-  // Participants with roles
+  // Participants with roles + agent status
   const participants = parseParticipants(thread.participants)
+  // Fetch agent statuses from proxy if thread has workspace
+  let agentStatuses = {}
+  if (thread.workspace) {
+    try {
+      const statusRes = await fetch(`${PROXY_BASE}/agents/status?thread_id=${thread.id}`)
+      if (statusRes.ok) {
+        const data = await statusRes.json()
+        for (const a of (data.agents || [])) agentStatuses[a.agentId] = a.status
+      }
+    } catch { /* proxy not running */ }
+  }
   document.getElementById('detail-participant-list').innerHTML = participants.map(p => {
     const color = senderColor(p.id)
+    const isAgent = matchesKnownAgent(p.id)
+    const agentStatus = agentStatuses[p.id]
+    let statusBadge = ''
+    if (isAgent) {
+      if (agentStatus === 'running') {
+        statusBadge = '<span class="inline-block w-2 h-2 rounded-full bg-green-400 mr-1" title="Running"></span>'
+      } else if (agentStatus === 'pending') {
+        statusBadge = '<span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1 animate-pulse" title="Starting..."></span>'
+      } else {
+        statusBadge = '<span class="inline-block w-2 h-2 rounded-full bg-gray-500 mr-1" title="Not running"></span>'
+      }
+    }
     return `<div class="flex items-center justify-between">
-      <span class="text-sm font-mono" style="color:${color}">${escapeHtml(p.id)}</span>
+      <span class="text-sm font-mono" style="color:${color}">${statusBadge}${escapeHtml(p.id)}</span>
       ${p.role ? `<span class="text-xs px-1.5 py-0.5 rounded bg-border/50 text-text-secondary">${escapeHtml(p.role)}</span>` : ''}
     </div>`
   }).join('')
@@ -455,7 +713,7 @@ document.getElementById('back-btn').onclick = () => {
 // --- Messages ---
 async function loadMessages(forceScroll = false) {
   if (!currentThreadId) return
-  const sender = document.getElementById('sender-input').value.trim() || 'anon'
+  const sender = document.getElementById('sender-input').value.trim() || 'user'
   try {
     const data = await api('GET', `/api/threads/${currentThreadId}/messages?reader=${encodeURIComponent(sender)}&limit=50`)
     cachedMessages = data.messages || []
@@ -470,6 +728,8 @@ async function loadMessages(forceScroll = false) {
       badge.className = `text-xs px-2 py-0.5 rounded-full border ${thread.status === 'open' ? 'border-accent text-accent' : 'border-red-400 text-red-400'}`
       badge.classList.remove('hidden')
       document.getElementById('close-thread-btn').classList.toggle('hidden', thread.status !== 'open')
+      document.getElementById('reopen-thread-btn').classList.toggle('hidden', thread.status !== 'closed')
+      document.getElementById('delete-thread-btn').classList.remove('hidden')
       document.getElementById('input-area').classList.toggle('hidden', thread.status !== 'open')
     }
   } catch (e) { console.error('Failed to load messages:', e) }
@@ -494,7 +754,7 @@ function renderMessages(data, forceScroll = false) {
         const refColor = senderColor(ref.sender)
         replyHtml = `<div class="mb-1 px-3 py-1.5 bg-border/20 rounded-t-lg border-l-2 cursor-pointer" style="border-color:${refColor}">
           <span class="text-xs font-mono font-medium" style="color:${refColor}">${escapeHtml(ref.sender)}</span>
-          <div class="text-xs text-muted truncate">${escapeHtml(ref.content.slice(0, 80))}</div>
+          <div class="text-xs text-muted truncate">${escapeHtml(summarizeContent(ref.content, 80))}</div>
         </div>`
       }
     }
@@ -509,7 +769,10 @@ function renderMessages(data, forceScroll = false) {
             <div class="flex items-baseline gap-2 mb-1">
               <span class="text-xs font-medium font-mono" style="color:${color}">${escapeHtml(m.sender)}</span>
               <span class="text-xs text-muted">${timeAgo(m.created_at)}</span>
-              <span class="text-xs text-muted/50" title="Read by: ${readBy.join(', ')}">${readBy.length > 1 ? '✓✓' : '✓'}</span>
+              ${readBy.filter(r => r !== m.sender && matchesKnownAgent(r)).map(r => {
+                const rc = senderColor(r)
+                return `<span class="text-xs px-1 py-0.5 rounded bg-border/40" style="color:${rc}" title="${escapeHtml(r)} read">${escapeHtml(r)} ✓</span>`
+              }).join(' ')}
               <div class="flex gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                 <button class="text-muted hover:text-accent" onclick="setReplyTo('${m.id}')" title="Reply">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
@@ -521,7 +784,7 @@ function renderMessages(data, forceScroll = false) {
             </div>
             ${replyHtml}
             <div class="bg-panel border border-border ${m.reply_to ? 'rounded-b-lg rounded-tr-lg' : 'rounded-lg'} text-sm msg-card ${expandedMsgIds.has(m.id) ? 'expanded' : ''}" data-msg-id="${m.id}">
-              <div class="msg-content px-3 py-2 whitespace-pre-wrap">${escapeHtml(m.content)}</div>
+              <div class="msg-content px-3 py-2">${renderContent(m.content)}</div>
               <button class="msg-expand items-center justify-center w-full py-1 text-muted hover:text-text-secondary transition-colors" onclick="toggleMsg('${m.id}')">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -554,7 +817,7 @@ function setReplyTo(msgId) {
   replyToMsg = msg
   document.getElementById('reply-sender').textContent = msg.sender
   document.getElementById('reply-sender').style.color = senderColor(msg.sender)
-  document.getElementById('reply-preview').textContent = msg.content.slice(0, 100)
+  document.getElementById('reply-preview').textContent = summarizeContent(msg.content, 100)
   document.getElementById('reply-bar').classList.remove('hidden')
   document.getElementById('message-input').focus()
 }
@@ -583,9 +846,46 @@ document.getElementById('dm-confirm').onclick = async () => {
 }
 
 // --- Send message ---
+const KNOWN_AGENT_IDS = ['claude-code', 'codex', 'gemini-cli']
+const PROXY_BASE = 'http://localhost:9000'
+
+function sanitizeTopic(topic) {
+  return topic.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '').substring(0, 50) || 'default'
+}
+
+async function getAppRoot() {
+  try {
+    const res = await fetch(`${PROXY_BASE}/app-root`)
+    if (res.ok) { const data = await res.json(); return data.root }
+  } catch {}
+  return null
+}
+
+function matchesKnownAgent(profileId) {
+  return KNOWN_AGENT_IDS.find(known => profileId === known || profileId.startsWith(known + '-'))
+}
+
+/** Parse @mentions from content, matching against participant IDs (fuzzy) */
+function parseMentions(content, participantIds) {
+  const mentions = []
+  const re = /@([\w-]+)/g
+  let m
+  while ((m = re.exec(content)) !== null) {
+    const mention = m[1]
+    const found = participantIds.find(id => id === mention || id.startsWith(mention + '-') || mention.startsWith(id + '-'))
+    if (found && !mentions.includes(found)) mentions.push(found)
+  }
+  return mentions
+}
+
 async function sendMessage() {
   const sender = document.getElementById('sender-input').value.trim()
-  const content = document.getElementById('message-input').value.trim()
+  let content = document.getElementById('message-input').value.trim()
+  // Append staged image as markdown
+  if (stagedImageDataUri) {
+    const imgMd = `![image](${stagedImageDataUri})`
+    content = content ? `${content}\n${imgMd}` : imgMd
+  }
   if (!sender || !content || !currentThreadId) return
   const body = { from: sender, content }
   if (replyToMsg) body.reply_to = replyToMsg.id
@@ -593,11 +893,214 @@ async function sendMessage() {
     await api('POST', `/api/threads/${currentThreadId}/messages`, body)
     document.getElementById('message-input').value = ''
     clearReply()
+    clearStagedImage()
     await loadMessages()
+
+    // Auto-invoke agent participants in PARALLEL via Node.js proxy
+    const thread = cachedThreads.find(t => t.id === currentThreadId)
+    if (thread && thread.workspace) {
+      const participants = JSON.parse(thread.participants || '[]')
+      const pIds = participants.map(p => typeof p === 'string' ? p : p.id)
+      const agentParticipants = pIds.filter(id => matchesKnownAgent(id) && id !== sender)
+
+      // Parse @mentions — if present, only invoke mentioned agents
+      const mentions = parseMentions(content, pIds)
+      const toInvoke = mentions.length > 0
+        ? agentParticipants.filter(id => mentions.includes(id))
+        : agentParticipants
+
+      // Show thinking indicators and start status polling
+      const messagesEl = document.getElementById('messages')
+      const statusPollers = {}
+      for (const agentId of toInvoke) {
+        const thinkingEl = document.createElement('div')
+        thinkingEl.id = `thinking-${agentId}`
+        thinkingEl.className = 'flex items-center gap-2 px-4 py-2 text-sm text-muted'
+        thinkingEl.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-accent animate-ping"></span> <span class="thinking-text font-mono text-xs">${agentId}...</span>`
+        messagesEl.appendChild(thinkingEl)
+
+        // Poll real status from agent-server
+        statusPollers[agentId] = setInterval(async () => {
+          try {
+            const r = await fetch(`${PROXY_BASE}/agents/${currentThreadId}/${agentId}/status`)
+            if (!r.ok) return
+            const s = await r.json()
+            const textEl = thinkingEl.querySelector('.thinking-text')
+            if (!textEl) return
+            if (s.state === 'processing' && s.statusText) {
+              textEl.textContent = `${agentId}: ${s.statusText}`
+            }
+          } catch {}
+        }, 1500)
+      }
+      messagesEl.scrollTop = messagesEl.scrollHeight
+
+      // Fire all agent invocations concurrently
+      const invokePromises = toInvoke.map(async (agentId) => {
+        try {
+          const invokeRes = await fetch(`${PROXY_BASE}/invoke`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              thread_id: currentThreadId,
+              agent_id: agentId,
+              message: content,
+              chain_depth: 0,
+              participants: pIds,
+            }),
+          })
+          if (!invokeRes.ok) {
+            const err = await invokeRes.json().catch(() => ({}))
+            console.warn(`Agent ${agentId} invoke failed:`, err.error || invokeRes.status)
+          }
+        } catch (e) { console.warn(`Agent ${agentId} invoke failed:`, e) }
+        // Stop polling, refresh messages, THEN remove thinking indicator
+        if (statusPollers[agentId]) clearInterval(statusPollers[agentId])
+        await loadMessages()
+        const el = document.getElementById(`thinking-${agentId}`)
+        if (el) el.remove()
+      })
+      await Promise.all(invokePromises)
+    }
   } catch (e) { console.error('Failed to send:', e) }
 }
 document.getElementById('send-btn').onclick = sendMessage
-document.getElementById('message-input').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }
+document.getElementById('message-input').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && document.getElementById('mention-dropdown').classList.contains('hidden')) { e.preventDefault(); sendMessage() } }
+
+// --- Image Attach/Paste ---
+let stagedImageDataUri = null
+const MAX_IMAGE_SIZE = 512 * 1024 // 512KB base64 limit
+
+function stageImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUri = reader.result
+    if (dataUri.length > MAX_IMAGE_SIZE) {
+      alert(`Image too large (${(dataUri.length / 1024).toFixed(0)}KB). Max 512KB.`)
+      return
+    }
+    stagedImageDataUri = dataUri
+    document.getElementById('image-preview-thumb').src = dataUri
+    document.getElementById('image-preview-name').textContent = file.name
+    document.getElementById('image-preview-size').textContent = (file.size / 1024).toFixed(1) + ' KB'
+    document.getElementById('image-preview-bar').classList.remove('hidden')
+  }
+  reader.readAsDataURL(file)
+}
+
+function clearStagedImage() {
+  stagedImageDataUri = null
+  document.getElementById('image-preview-bar').classList.add('hidden')
+  document.getElementById('image-file-input').value = ''
+}
+window.clearStagedImage = clearStagedImage
+
+document.getElementById('image-file-input').onchange = (e) => {
+  const file = e.target.files[0]
+  if (file) stageImageFile(file)
+}
+
+// Paste image from clipboard
+document.getElementById('message-input').addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault()
+      stageImageFile(item.getAsFile())
+      return
+    }
+  }
+})
+
+// --- @Mention Dropdown ---
+;(function() {
+  const msgInput = document.getElementById('message-input')
+  const dropdown = document.getElementById('mention-dropdown')
+  let mentionStart = -1 // cursor position where '@' was typed
+
+  function getMentionParticipants() {
+    if (!currentThreadId) return []
+    const thread = cachedThreads.find(t => t.id === currentThreadId)
+    if (!thread) return []
+    const parts = JSON.parse(thread.participants || '[]')
+    const sender = document.getElementById('sender-input').value.trim()
+    return parts.map(p => typeof p === 'string' ? p : p.id).filter(id => id !== sender)
+  }
+
+  function showDropdown(filter) {
+    const participants = getMentionParticipants()
+    const filtered = filter
+      ? participants.filter(id => id.toLowerCase().includes(filter.toLowerCase()))
+      : participants
+    if (filtered.length === 0) { hideDropdown(); return }
+    dropdown.innerHTML = filtered.map((id, i) =>
+      `<div class="px-3 py-2 text-sm text-text-primary hover:bg-bg cursor-pointer mention-item${i === 0 ? ' bg-bg' : ''}" data-id="${id}"><span class="text-accent">@</span>${id}</div>`
+    ).join('')
+    dropdown.classList.remove('hidden')
+  }
+
+  function hideDropdown() {
+    dropdown.classList.add('hidden')
+    mentionStart = -1
+  }
+
+  msgInput.addEventListener('input', () => {
+    const val = msgInput.value
+    const cursor = msgInput.selectionStart
+    // Detect if we're in an @mention context
+    const before = val.substring(0, cursor)
+    const atIdx = before.lastIndexOf('@')
+    if (atIdx >= 0 && (atIdx === 0 || before[atIdx - 1] === ' ')) {
+      const partial = before.substring(atIdx + 1)
+      if (!/\s/.test(partial)) {
+        mentionStart = atIdx
+        showDropdown(partial)
+        return
+      }
+    }
+    hideDropdown()
+  })
+
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.mention-item')
+    if (!item) return
+    const id = item.dataset.id
+    const val = msgInput.value
+    const before = val.substring(0, mentionStart)
+    const after = val.substring(msgInput.selectionStart)
+    msgInput.value = before + '@' + id + ' ' + after
+    msgInput.focus()
+    const newPos = mentionStart + id.length + 2
+    msgInput.setSelectionRange(newPos, newPos)
+    hideDropdown()
+  })
+
+  msgInput.addEventListener('keydown', (e) => {
+    if (dropdown.classList.contains('hidden')) return
+    if (e.key === 'Escape') { e.preventDefault(); hideDropdown() }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const items = dropdown.querySelectorAll('.mention-item')
+      if (items.length === 0) return
+      const active = dropdown.querySelector('.mention-item.bg-bg')
+      let idx = active ? Array.from(items).indexOf(active) : -1
+      if (active) active.classList.remove('bg-bg')
+      idx = e.key === 'ArrowDown' ? (idx + 1) % items.length : (idx - 1 + items.length) % items.length
+      items[idx].classList.add('bg-bg')
+      items[idx].scrollIntoView({ block: 'nearest' })
+    }
+    if (e.key === 'Enter' && !dropdown.classList.contains('hidden')) {
+      const active = dropdown.querySelector('.mention-item.bg-bg') || dropdown.querySelector('.mention-item')
+      if (active) { e.preventDefault(); active.click() }
+    }
+  })
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && e.target !== msgInput) hideDropdown()
+  })
+})()
 
 // --- New Thread Modal ---
 function openNewThreadModal() {
@@ -681,9 +1184,33 @@ document.getElementById('nt-create').onclick = async () => {
   if (!topic || !selectedParticipants.length) return
   const description = document.getElementById('nt-description').value.trim() || undefined
   const participants = selectedParticipants.map(p => p.role ? { id: p.id, role: p.role } : p.id)
+  // Auto-generate workspace from topic
+  const hasAgents = selectedParticipants.some(p => matchesKnownAgent(p.id))
+  let workspace = undefined
+  if (hasAgents) {
+    const appRoot = await getAppRoot()
+    if (appRoot) {
+      const sep = appRoot.includes('\\') ? '\\' : '/'
+      workspace = appRoot + sep + 'temp' + sep + sanitizeTopic(topic)
+    }
+  }
   try {
-    const thread = await api('POST', '/api/threads', { topic, description, participants })
+    const thread = await api('POST', '/api/threads', { topic, description, participants, workspace })
     document.getElementById('new-thread-modal').classList.add('hidden')
+    // If workspace is set and there are agent participants, auto-launch them
+    if (workspace) {
+      const agentParticipants = selectedParticipants.filter(p => matchesKnownAgent(p.id))
+      for (const agent of agentParticipants) {
+        try {
+          const baseAgentId = matchesKnownAgent(agent.id)
+          await fetch(`/api/agents/launch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thread_id: thread.id, agent_id: agent.id, base_agent_id: baseAgentId, workspace })
+          })
+        } catch (e) { console.warn('Agent launch hint failed:', e) }
+      }
+    }
     await loadThreads()
     selectThread(thread.id)
   } catch (e) { console.error('Failed to create thread:', e) }
@@ -691,6 +1218,50 @@ document.getElementById('nt-create').onclick = async () => {
 
 // --- Close Thread ---
 document.getElementById('close-thread-btn').onclick = () => { document.getElementById('close-thread-modal').classList.remove('hidden'); document.getElementById('ct-reason').focus() }
+document.getElementById('reopen-thread-btn').onclick = async () => {
+  if (!currentThreadId) return
+  const reopenedBy = document.getElementById('sender-input').value.trim() || 'user'
+  try {
+    await api('PUT', `/api/threads/${currentThreadId}`, { status: 'open', reopened_by: reopenedBy })
+    // Re-launch agents for the reopened thread
+    const thread = cachedThreads.find(t => t.id === currentThreadId)
+    if (thread && thread.workspace) {
+      const pIds = participantIds(thread.participants)
+      for (const pid of pIds) {
+        const base = matchesKnownAgent(pid)
+        if (base) {
+          try {
+            await api('POST', '/api/agents/launch', { thread_id: currentThreadId, agent_id: pid, base_agent_id: base, workspace: thread.workspace })
+          } catch { /* ignore */ }
+        }
+      }
+    }
+    await loadMessages()
+    await loadThreads()
+    if (detailPanelVisible) renderDetailPanel()
+  } catch (e) { console.error('Failed to reopen thread:', e) }
+}
+document.getElementById('delete-thread-btn').onclick = async () => {
+  if (!currentThreadId) return
+  if (!confirm(`Delete thread #${currentThreadId} and all its messages? This cannot be undone.`)) return
+  try {
+    await api('DELETE', `/api/threads/${currentThreadId}`)
+    currentThreadId = null
+    window.location.hash = ''
+    if (pollingInterval) clearInterval(pollingInterval)
+    document.getElementById('messages').innerHTML = '<div class="text-center text-muted text-sm py-8">Select a thread</div>'
+    document.getElementById('msg-topic').textContent = 'Select a thread'
+    document.getElementById('msg-participants').textContent = ''
+    document.getElementById('msg-status-badge').classList.add('hidden')
+    document.getElementById('close-thread-btn').classList.add('hidden')
+    document.getElementById('reopen-thread-btn').classList.add('hidden')
+    document.getElementById('delete-thread-btn').classList.add('hidden')
+    document.getElementById('input-area').classList.add('hidden')
+    document.getElementById('toggle-detail-btn').classList.add('hidden')
+    if (detailPanelVisible) toggleDetailPanel()
+    await loadThreads()
+  } catch (e) { console.error('Failed to delete thread:', e) }
+}
 document.getElementById('ct-cancel').onclick = () => document.getElementById('close-thread-modal').classList.add('hidden')
 document.getElementById('ct-confirm').onclick = async () => {
   const reason = document.getElementById('ct-reason').value.trim()

@@ -18,6 +18,7 @@ export interface ProfileRow {
   display_name: string | null
   role: string
   description: string | null
+  persona: string | null
   created_at: string
 }
 
@@ -26,6 +27,7 @@ export interface ThreadRow {
   topic: string
   description: string | null
   participants: string // JSON array string (ParticipantItem[])
+  workspace: string | null
   status: string
   created_at: string
   updated_at: string
@@ -47,12 +49,14 @@ export interface UpsertProfileInput {
   display_name?: string
   role?: string
   description?: string
+  persona?: string
 }
 
 export interface CreateThreadInput {
   topic: string
   description?: string
   participants: ParticipantItem[]
+  workspace?: string
 }
 
 export interface SendMessageInput {
@@ -62,9 +66,10 @@ export interface SendMessageInput {
 }
 
 export interface CloseThreadInput {
-  status: 'closed'
-  reason: string
-  closed_by: string
+  status: 'closed' | 'open'
+  reason?: string
+  closed_by?: string
+  reopened_by?: string
 }
 
 export interface ListThreadsQuery {
@@ -100,4 +105,24 @@ export interface MessagesResponse {
   messages: MessageRow[]
   has_more: boolean
   remaining_count: number
+}
+
+// Bridge types
+export interface AgentEndpointRow {
+  id: string
+  mcp_url: string
+  display_name: string | null
+  status: string
+  capabilities: string
+  tools: string
+  last_connected_at: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RegisterEndpointInput {
+  id: string
+  mcp_url: string
+  display_name?: string
 }

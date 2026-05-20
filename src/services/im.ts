@@ -38,11 +38,6 @@ export function normalizeParticipants(raw: string): ParticipantEntry[] {
   return parsed.map((item) => (typeof item === 'string' ? { id: item } : item))
 }
 
-/** Extract participant IDs from a ParticipantItem array */
-function extractParticipantIds(items: ParticipantItem[]): string[] {
-  return items.map((item) => (typeof item === 'string' ? item : item.id))
-}
-
 /** Normalize input participants to ParticipantEntry[] for storage */
 function toParticipantEntries(items: ParticipantItem[]): ParticipantEntry[] {
   return items.map((item) => (typeof item === 'string' ? { id: item } : item))
@@ -78,11 +73,12 @@ export async function upsertProfile(
 
   if (existing) {
     await db
-      .prepare('UPDATE profiles SET display_name = ?, role = ?, description = ? WHERE id = ?')
+      .prepare('UPDATE profiles SET display_name = ?, role = ?, description = ?, persona = ? WHERE id = ?')
       .bind(
         input.display_name ?? existing.display_name,
         input.role ?? existing.role,
         input.description ?? existing.description,
+        input.persona ?? existing.persona,
         input.id,
       )
       .run()
@@ -95,12 +91,13 @@ export async function upsertProfile(
   }
 
   await db
-    .prepare('INSERT INTO profiles (id, display_name, role, description) VALUES (?, ?, ?, ?)')
+    .prepare('INSERT INTO profiles (id, display_name, role, description, persona) VALUES (?, ?, ?, ?, ?)')
     .bind(
       input.id,
       input.display_name ?? input.id,
       input.role ?? 'agent',
       input.description ?? null,
+      input.persona ?? null,
     )
     .run()
 
@@ -125,8 +122,8 @@ export async function createThread(db: D1Database, input: CreateThreadInput): Pr
   const participants = toParticipantEntries(input.participants)
 
   const result = await db
-    .prepare('INSERT INTO threads (topic, description, participants) VALUES (?, ?, ?)')
-    .bind(input.topic, input.description ?? null, JSON.stringify(participants))
+    .prepare('INSERT INTO threads (topic, description, participants, workspace) VALUES (?, ?, ?, ?)')
+    .bind(input.topic, input.description ?? null, JSON.stringify(participants), input.workspace ?? null)
     .run()
 
   const thread = await db
@@ -319,8 +316,24 @@ export async function closeThread(
   const threadId = parseThreadId(threadRef)
   const thread = await getThread(db, threadId)
   if (!thread) throw new ServiceError('Thread not found', 404)
-  if (thread.status === 'closed') throw new ServiceError('Thread is already closed', 400)
 
+  // Reopen a closed thread
+  if (input.status === 'open') {
+    if (thread.status === 'open') throw new ServiceError('Thread is already open', 400)
+    const by = input.reopened_by || input.closed_by || 'system'
+    await ensureProfile(db, by)
+    const reopenMsgId = messageId()
+    await db.batch([
+      db.prepare("UPDATE threads SET status = 'open', updated_at = datetime('now') WHERE id = ?").bind(threadId),
+      db.prepare('INSERT INTO messages (id, thread_id, sender, content, read_by) VALUES (?, ?, ?, ?, ?)')
+        .bind(reopenMsgId, threadId, by, '[REOPENED]', JSON.stringify([by])),
+    ])
+    const updated = await db.prepare('SELECT * FROM threads WHERE id = ?').bind(threadId).first<ThreadRow>()
+    return updated!
+  }
+
+  // Close an open thread
+  if (thread.status === 'closed') throw new ServiceError('Thread is already closed', 400)
   if (!input.closed_by) throw new ServiceError('closed_by is required', 400)
 
   const closeMsgId = messageId()
@@ -360,4 +373,15 @@ export async function deleteMessage(db: D1Database, msgId: string): Promise<void
   if (!message) throw new ServiceError('Message not found', 404)
 
   await db.prepare('DELETE FROM messages WHERE id = ?').bind(msgId).run()
+}
+
+export async function deleteThread(db: D1Database, threadRef: string): Promise<void> {
+  const id = parseThreadId(threadRef)
+  const thread = await db.prepare('SELECT * FROM threads WHERE id = ?').bind(id).first()
+  if (!thread) throw new ServiceError('Thread not found', 404)
+
+  await db.batch([
+    db.prepare('DELETE FROM messages WHERE thread_id = ?').bind(id),
+    db.prepare('DELETE FROM threads WHERE id = ?').bind(id),
+  ])
 }

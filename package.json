@@ -3,13 +3,20 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "wrangler dev",
+    "start": "tsx scripts/start.ts",
+    "configure": "tsx scripts/configure-mcp.ts",
+    "configure:project": "tsx scripts/configure-mcp.ts --project",
+    "detect": "tsx scripts/detect-agents.ts --sync",
     "cf:deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute agent-im-db --local --file=src/db/schema.sql",
     "db:init:remote": "wrangler d1 execute agent-im-db --remote --file=src/db/schema.sql",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\" \"*.md\""
+    "format": "prettier --write \"src/**/*.ts\" \"*.md\"",
+    "electron:dev": "tsx scripts/build-electron.ts && electron dist-electron/main.cjs",
+    "electron:build": "tsx scripts/build-electron.ts && electron-builder --config electron-builder.config.cjs --win"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
@@ -20,6 +27,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250320.0",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.3",
     "wrangler": "^4.14.1"
   },

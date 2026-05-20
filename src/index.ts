@@ -5,6 +5,7 @@ import type { Env } from './types.js'
 import api from './routes/api.js'
 import mcp from './routes/mcp.js'
 import web from './routes/web.js'
+import bridge from './routes/bridge.js'
 import { COOKIE_NAME } from './routes/web.js'
 import { getStatus } from './services/im.js'
 import { generateGuide } from './lib/guide.js'
@@ -14,6 +15,7 @@ const app = new Hono<{ Bindings: Env }>()
 // CORS for API and MCP endpoints
 app.use('/api/*', cors())
 app.use('/mcp', cors())
+app.use('/api/bridge/*', cors())
 
 // Auth middleware — skip for public routes, support Bearer token + cookie
 app.use('*', async (c, next) => {
@@ -49,6 +51,7 @@ app.use('*', async (c, next) => {
 
 // Mount routes
 app.route('/api', api)
+app.route('/api/bridge', bridge)
 app.route('/mcp', mcp)
 app.route('/', web)
 

@@ -12,6 +12,12 @@ import {
   closeThread,
   ServiceError,
 } from '../services/im.js'
+import {
+  listEndpoints,
+  probeEndpoint,
+  callRemoteTool,
+  BridgeError,
+} from '../services/bridge.js'
 
 function createMcpServer(db: D1Database): McpServer {
   const server = new McpServer({
@@ -31,7 +37,7 @@ function createMcpServer(db: D1Database): McpServer {
 
   server.tool(
     'create_thread',
-    'Create a new discussion thread. Optionally add a description and assign roles to participants.',
+    'Create a new discussion thread. Optionally add a description, assign roles to participants, and specify a workspace directory for auto-launching agents.',
     {
       topic: z.string().describe('Discussion topic'),
       description: z.string().optional().describe('Thread description providing context or goals'),
@@ -48,9 +54,10 @@ function createMcpServer(db: D1Database): McpServer {
         .describe(
           'Participants: ["name1","name2"] or [{"id":"name1","role":"reviewer"},{"id":"name2","role":"owner"}]',
         ),
+      workspace: z.string().optional().describe('Local folder path where agents will work (e.g. "/home/user/project")'),
     },
-    async ({ topic, description, participants }) => {
-      const thread = await createThread(db, { topic, description, participants })
+    async ({ topic, description, participants, workspace }) => {
+      const thread = await createThread(db, { topic, description, participants, workspace })
       return { content: [{ type: 'text', text: JSON.stringify(thread, null, 2) }] }
     },
   )
@@ -142,6 +149,69 @@ Pagination: if has_more is true, use the earliest message's created_at as "befor
         closed_by,
       })
       return { content: [{ type: 'text', text: JSON.stringify(thread, null, 2) }] }
+    },
+  )
+
+  server.tool(
+    'reopen_thread',
+    'Reopen a previously closed thread so messages can be sent again.',
+    {
+      thread_id: z
+        .string()
+        .describe('Thread number, e.g. "3" or "#3"'),
+      reopened_by: z.string().describe('Who is reopening the thread'),
+    },
+    async ({ thread_id, reopened_by }) => {
+      const thread = await closeThread(db, thread_id, {
+        status: 'open',
+        reopened_by,
+      })
+      return { content: [{ type: 'text', text: JSON.stringify(thread, null, 2) }] }
+    },
+  )
+
+  server.tool(
+    'list_agents',
+    'List registered agent endpoints and their available tools. Use this to discover what remote agents are connected to Agent-IM and what capabilities they expose.',
+    {},
+    async () => {
+      const endpoints = await listEndpoints(db)
+      const summary = endpoints.map((ep) => ({
+        id: ep.id,
+        display_name: ep.display_name,
+        mcp_url: ep.mcp_url,
+        status: ep.status,
+        tools: JSON.parse(ep.tools),
+        last_connected_at: ep.last_connected_at,
+      }))
+      return { content: [{ type: 'text', text: JSON.stringify({ agents: summary }, null, 2) }] }
+    },
+  )
+
+  server.tool(
+    'call_agent',
+    'Call a tool on a registered remote agent via Agent-IM bridge. First use list_agents to discover available agents and their tools.',
+    {
+      agent_id: z.string().describe('The agent endpoint ID (from list_agents)'),
+      tool: z.string().describe('Tool name to call on the remote agent'),
+      arguments: z
+        .record(z.unknown())
+        .optional()
+        .describe('Arguments to pass to the remote tool'),
+    },
+    async ({ agent_id, tool, arguments: args }) => {
+      try {
+        const result = await callRemoteTool(db, agent_id, tool, args ?? {})
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+      } catch (e) {
+        if (e instanceof BridgeError) {
+          return {
+            content: [{ type: 'text', text: `Error: ${e.message}` }],
+            isError: true,
+          }
+        }
+        throw e
+      }
     },
   )
 

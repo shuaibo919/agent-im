@@ -1,5 +1,10 @@
 node_modules/
 dist/
+dist-electron/
+release/
 .wrangler/
 .dev.vars
 *.log
+.claude/
+.vscode/
+temp/

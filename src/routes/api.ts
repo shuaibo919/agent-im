@@ -10,6 +10,7 @@ import {
   readMessages,
   closeThread,
   deleteMessage,
+  deleteThread,
   ServiceError,
 } from '../services/im.js'
 
@@ -133,12 +134,108 @@ api.put('/threads/:id', async (c) => {
   }
 })
 
+// DELETE /api/threads/:id
+api.delete('/threads/:id', async (c) => {
+  try {
+    const threadId = c.req.param('id')
+    await deleteThread(c.env.DB, threadId)
+    return c.json({ deleted: true })
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// NOTE: /api/threads/:id/invoke has been moved to the Node.js orchestrator proxy (port 9000)
+// Workers (workerd) cannot fetch localhost, so invoke must run in Node.js
+
 // DELETE /api/messages/:id
 api.delete('/messages/:id', async (c) => {
   try {
     const msgId = c.req.param('id')
     await deleteMessage(c.env.DB, msgId)
     return c.json({ deleted: true })
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// GET /api/profiles/:id
+api.get('/profiles/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const profile = await c.env.DB.prepare('SELECT * FROM profiles WHERE id = ?').bind(id).first()
+    if (!profile) return c.json({ error: 'Profile not found' }, 404)
+    return c.json(profile)
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// DELETE /api/profiles/:id
+api.delete('/profiles/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const result = await c.env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(id).run()
+    if (!result.meta.changes) return c.json({ error: 'Profile not found' }, 404)
+    return c.json({ deleted: true })
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// POST /api/agents/launch — hint to orchestrator to launch an agent for a thread
+// In Workers runtime this just stores the request; the Node.js orchestrator polls or is notified
+api.post('/agents/launch', async (c) => {
+  try {
+    const body = await c.req.json<{ thread_id: number; agent_id: string; base_agent_id?: string; workspace: string }>()
+    if (!body.thread_id || !body.agent_id || !body.workspace) {
+      return c.json({ error: 'thread_id, agent_id, and workspace are required' }, 400)
+    }
+    // Store as a pending launch request in agent_endpoints with a special status
+    const endpointId = `${body.agent_id}-thread-${body.thread_id}`
+    await c.env.DB.prepare(
+      `INSERT INTO agent_endpoints (id, mcp_url, display_name, status, capabilities)
+       VALUES (?, ?, ?, 'pending_launch', ?)
+       ON CONFLICT(id) DO UPDATE SET status='pending_launch', capabilities=excluded.capabilities, updated_at=datetime('now')`
+    ).bind(
+      endpointId,
+      `http://localhost:0/mcp`, // placeholder, orchestrator will update
+      `${body.agent_id} (Thread #${body.thread_id})`,
+      JSON.stringify({
+        thread_id: body.thread_id,
+        agent_id: body.agent_id,
+        base_agent_id: body.base_agent_id || body.agent_id,
+        workspace: body.workspace,
+      })
+    ).run()
+    return c.json({ queued: true, endpoint_id: endpointId })
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// POST /api/agents/local — store detected agents (called by start script)
+api.post('/agents/local', async (c) => {
+  try {
+    const { agents } = await c.req.json<{ agents: { id: string; name: string; exe_path: string | null; config_dir: string | null; models: { label: string; value: string }[] }[] }>()
+    // Clear and re-insert
+    await c.env.DB.prepare('DELETE FROM local_agents').run()
+    for (const agent of agents) {
+      await c.env.DB.prepare(
+        'INSERT INTO local_agents (id, name, exe_path, config_dir, models) VALUES (?, ?, ?, ?, ?)'
+      ).bind(agent.id, agent.name, agent.exe_path, agent.config_dir, JSON.stringify(agent.models)).run()
+    }
+    return c.json({ synced: agents.length })
+  } catch (e) {
+    return handleError(e)
+  }
+})
+
+// GET /api/agents/local — get detected agents
+api.get('/agents/local', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare('SELECT * FROM local_agents ORDER BY name').all()
+    return c.json({ agents: results })
   } catch (e) {
     return handleError(e)
   }
