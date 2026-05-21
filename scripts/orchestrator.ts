@@ -63,8 +63,9 @@ export async function launchAgent(
   const port = nextPort++
   const url = `http://localhost:${port}`
 
-  // Ensure workspace directory exists
-  try { fs.mkdirSync(workspace, { recursive: true }) } catch { /* ignore */ }
+  // Each agent gets its own subdirectory so it cannot read other agents' persona/context files
+  const agentWorkspace = path.join(workspace, `.agent-${agentId}`)
+  try { fs.mkdirSync(agentWorkspace, { recursive: true }) } catch { /* ignore */ }
 
   // Fetch agent's persona from profile and initialize context MD file
   let persona: string | null = null
@@ -75,7 +76,7 @@ export async function launchAgent(
       persona = profile.persona || null
     }
   } catch { /* ignore */ }
-  initAgentContextFile(workspace, agentId, persona, participants)
+  initAgentContextFile(agentWorkspace, agentId, persona, participants)
 
   // Use base agent type for the CLI command (e.g. "claude-code" for "claude-code-opus4")
   const agentType = baseAgentType || agentId
@@ -83,7 +84,7 @@ export async function launchAgent(
   const cmdArgs = [
     AGENT_SERVER_SCRIPT,
     '--agent', agentType,
-    '--workspace', workspace,
+    '--workspace', agentWorkspace,
     '--port', String(port),
   ]
   if (model) cmdArgs.push('--model', model)
@@ -108,7 +109,7 @@ export async function launchAgent(
     activeAgents.delete(key)
   })
 
-  activeAgents.set(key, { threadId, agentId, port, process: child, workspace })
+  activeAgents.set(key, { threadId, agentId, port, process: child, workspace: agentWorkspace })
 
   // Wait for server to be ready
   await waitForReady(port, 15_000)

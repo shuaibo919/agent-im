@@ -17,15 +17,20 @@ function getProjectRoot(): string {
   return path.resolve(__dirname, '..')
 }
 
+function getDataDir(): string {
+  return path.join(app.getPath('userData'), 'wrangler-state')
+}
+
 function initDatabase(root: string): void {
+  const persistTo = getDataDir()
   try {
-    execSync('npx wrangler d1 execute agent-im-db --local --file=src/db/schema.sql', {
+    execSync(`npx wrangler d1 execute agent-im-db --local --persist-to "${persistTo}" --file=src/db/schema.sql`, {
       cwd: root,
       stdio: 'ignore',
     })
     // Run migrations (ALTER TABLE etc. — errors expected if already applied)
     try {
-      execSync('npx wrangler d1 execute agent-im-db --local --file=src/db/migrations.sql', {
+      execSync(`npx wrangler d1 execute agent-im-db --local --persist-to "${persistTo}" --file=src/db/migrations.sql`, {
         cwd: root,
         stdio: 'ignore',
       })
@@ -36,7 +41,8 @@ function initDatabase(root: string): void {
 }
 
 function startWrangler(root: string): ChildProcess {
-  const child = spawn('npx', ['wrangler', 'dev', '--port', String(PORT)], {
+  const persistTo = getDataDir()
+  const child = spawn('npx', ['wrangler', 'dev', '--port', String(PORT), '--persist-to', persistTo], {
     cwd: root,
     shell: true,
     stdio: 'pipe',

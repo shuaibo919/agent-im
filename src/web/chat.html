@@ -177,11 +177,11 @@
   </div>
 
   <!-- New Thread Modal -->
-  <div id="new-thread-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+  <div id="new-thread-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 hidden">
     <div class="bg-panel border border-border rounded-lg p-6 w-96 shadow-2xl max-h-[90vh] overflow-y-auto">
       <h2 class="text-lg font-semibold mb-4">New Thread</h2>
-      <input id="nt-topic" type="text" placeholder="Topic" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
-      <textarea id="nt-description" placeholder="Description (optional)" rows="2" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 resize-none"></textarea>
+      <input id="nt-topic" type="text" placeholder="Topic" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
+      <textarea id="nt-description" placeholder="Description (optional)" rows="2" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 resize-none"></textarea>
       <div class="mb-4">
         <label class="text-xs text-muted mb-1.5 block">Participants</label>
         <div id="nt-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]"></div>
@@ -198,7 +198,7 @@
   </div>
 
   <!-- Close Thread Modal -->
-  <div id="close-thread-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+  <div id="close-thread-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 hidden">
     <div class="bg-panel border border-border rounded-lg p-6 w-96 shadow-2xl">
       <h2 class="text-lg font-semibold mb-4">Close Thread</h2>
       <input id="ct-reason" type="text" placeholder="Reason for closing" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-4" />
@@ -210,7 +210,7 @@
   </div>
 
   <!-- Delete Message Modal -->
-  <div id="delete-msg-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+  <div id="delete-msg-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 hidden">
     <div class="bg-panel border border-border rounded-lg p-6 w-80 shadow-2xl">
       <h2 class="text-lg font-semibold mb-2">Delete Message</h2>
       <p class="text-sm text-text-secondary mb-4">This action cannot be undone.</p>
@@ -222,7 +222,7 @@
   </div>
 
   <!-- Profile Modal -->
-  <div id="profile-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+  <div id="profile-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 hidden">
     <div class="bg-panel border border-border rounded-lg p-6 w-[480px] shadow-2xl max-h-[90vh] overflow-y-auto">
       <h2 id="pm-title" class="text-lg font-semibold mb-4">Add Profile</h2>
 
@@ -236,8 +236,8 @@
         <span class="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-panel px-2 text-xs text-muted">or manually</span>
       </div>
 
-      <input id="pm-id" type="text" placeholder="ID (e.g. claude-code)" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 font-mono" />
-      <input id="pm-display-name" type="text" placeholder="Display name" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
+      <input id="pm-id" type="text" placeholder="ID (e.g. claude-code)" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 font-mono" />
+      <input id="pm-display-name" type="text" placeholder="Display name" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
       <select id="pm-role" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3 appearance-none">
         <option value="agent">Agent</option>
         <option value="human">Human</option>
@@ -250,8 +250,8 @@
         </select>
       </div>
 
-      <input id="pm-description" type="text" placeholder="Description (optional)" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
-      <textarea id="pm-persona" placeholder="Persona / System Prompt (optional)" rows="3" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-4 resize-y"></textarea>
+      <input id="pm-description" type="text" placeholder="Description (optional)" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-3" />
+      <textarea id="pm-persona" placeholder="Persona / System Prompt (optional)" rows="3" autocomplete="off" class="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-accent mb-4 resize-y"></textarea>
       <div class="flex gap-2 justify-between">
         <button id="pm-delete" class="text-sm text-red-400 hover:text-red-300 px-3 py-2 hidden">Delete</button>
         <div class="flex gap-2">
@@ -313,10 +313,10 @@ function escapeHtml(str) {
 
 /** Render message content — parse markdown via marked, with image/link support */
 function renderContent(raw) {
-  // Step 1: Extract data-URI images BEFORE markdown parsing (marked doesn't handle huge data URIs well)
+  // Step 1: Extract ALL markdown images BEFORE parsing (data URIs are too large for marked; regular images need click handling)
   const imagePlaceholders = []
-  let processed = raw.replace(/!\[([^\]]*)\]\((data:image\/[^\s)]+)\)/g, (match, alt, url) => {
-    const token = `__IMG_${imagePlaceholders.length}__`
+  let processed = raw.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    const token = `IMGPLACEHOLDER${imagePlaceholders.length}ENDPLACEHOLDER`
     imagePlaceholders.push({ alt, url })
     return token
   })
@@ -324,11 +324,12 @@ function renderContent(raw) {
   // Step 2: parse markdown → HTML via marked (handles bold, italic, code, lists, headers, etc.)
   let s = marked.parse(processed, { breaks: true, gfm: true })
 
-  // Step 3: restore data-URI image placeholders as <img> tags
+  // Step 3: restore image placeholders as <img> tags
   for (let i = 0; i < imagePlaceholders.length; i++) {
     const { alt, url } = imagePlaceholders[i]
     const safeAlt = escapeHtml(alt)
-    s = s.replaceAll(`__IMG_${i}__`, `<img src="${url}" alt="${safeAlt}" loading="lazy" onclick="window.open(this.src,'_blank')" />`)
+    const imgTag = `<img src="${url}" alt="${safeAlt}" class="max-w-full rounded-lg my-2 cursor-pointer" loading="lazy" onclick="window.open(this.src,'_blank')" />`
+    s = s.replaceAll(`IMGPLACEHOLDER${i}ENDPLACEHOLDER`, imgTag)
   }
 
   // Step 4: make all links open in new tab
@@ -341,6 +342,12 @@ function summarizeContent(raw, maxLen) {
   let s = raw.replace(/!\[[^\]]*\]\(data:image\/[^)]+\)/g, '[Image]')
   s = s.replace(/!\[[^\]]*\]\(https?:\/\/[^)]+\)/g, '[Image]')
   return s.slice(0, maxLen || 80)
+}
+
+/** Get display name for an id — falls back to id itself */
+function displayName(id) {
+  const prof = allProfiles.find(p => p.id === id)
+  return prof && prof.display_name ? prof.display_name : id
 }
 
 /** Parse participants JSON — compatible with ["a"] and [{"id":"a","role":"x"}] */
@@ -399,7 +406,7 @@ function renderThreads(threads) {
         <span class="text-xs ${isClosed ? 'text-red-400' : 'text-accent'}">${t.status}</span>
       </div>
       <div class="flex items-center justify-between">
-        <span class="text-xs text-muted font-mono truncate">${pIds.join(', ')}</span>
+        <span class="text-xs text-muted font-mono truncate">${pIds.map(id => escapeHtml(displayName(id))).join(', ')}</span>
         <span class="text-xs text-muted">${t.message_count || 0} msgs</span>
       </div>
       <div class="text-xs text-muted mt-1">${timeAgo(t.last_message_at || t.created_at)}</div>
@@ -673,7 +680,7 @@ async function renderDetailPanel() {
       }
     }
     return `<div class="flex items-center justify-between">
-      <span class="text-sm font-mono" style="color:${color}">${statusBadge}${escapeHtml(p.id)}</span>
+      <span class="text-sm font-mono" style="color:${color}">${statusBadge}${escapeHtml(displayName(p.id))}</span>
       ${p.role ? `<span class="text-xs px-1.5 py-0.5 rounded bg-border/50 text-text-secondary">${escapeHtml(p.role)}</span>` : ''}
     </div>`
   }).join('')
@@ -722,7 +729,7 @@ async function loadMessages(forceScroll = false) {
     if (thread) {
       const pIds = participantIds(thread.participants)
       document.getElementById('msg-topic').textContent = `#${thread.id} · ${thread.topic}`
-      document.getElementById('msg-participants').textContent = pIds.join(', ')
+      document.getElementById('msg-participants').textContent = pIds.map(id => displayName(id)).join(', ')
       const badge = document.getElementById('msg-status-badge')
       badge.textContent = thread.status
       badge.className = `text-xs px-2 py-0.5 rounded-full border ${thread.status === 'open' ? 'border-accent text-accent' : 'border-red-400 text-red-400'}`
@@ -762,16 +769,16 @@ function renderMessages(data, forceScroll = false) {
     return `<div class="flex flex-col ${isClosed ? 'items-center' : ''}">
       ${isClosed
         ? `<div class="bg-border/30 text-muted text-xs px-4 py-2 rounded-lg max-w-md text-center">
-            <span class="font-medium" style="color:${color}">${escapeHtml(m.sender)}</span> closed the thread
+            <span class="font-medium" style="color:${color}">${escapeHtml(displayName(m.sender))}</span> closed the thread
             <div class="mt-1 text-text-secondary">${escapeHtml(m.content.replace('[CLOSED] ', ''))}</div>
           </div>`
         : `<div class="max-w-2xl group">
             <div class="flex items-baseline gap-2 mb-1">
-              <span class="text-xs font-medium font-mono" style="color:${color}">${escapeHtml(m.sender)}</span>
+              <span class="text-xs font-medium font-mono" style="color:${color}">${escapeHtml(displayName(m.sender))}</span>
               <span class="text-xs text-muted">${timeAgo(m.created_at)}</span>
               ${readBy.filter(r => r !== m.sender && matchesKnownAgent(r)).map(r => {
                 const rc = senderColor(r)
-                return `<span class="text-xs px-1 py-0.5 rounded bg-border/40" style="color:${rc}" title="${escapeHtml(r)} read">${escapeHtml(r)} ✓</span>`
+                return `<span class="text-xs px-1 py-0.5 rounded bg-border/40" style="color:${rc}" title="${escapeHtml(r)} read">${escapeHtml(displayName(r))} ✓</span>`
               }).join(' ')}
               <div class="flex gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                 <button class="text-muted hover:text-accent" onclick="setReplyTo('${m.id}')" title="Reply">
@@ -1036,7 +1043,7 @@ document.getElementById('message-input').addEventListener('paste', (e) => {
       : participants
     if (filtered.length === 0) { hideDropdown(); return }
     dropdown.innerHTML = filtered.map((id, i) =>
-      `<div class="px-3 py-2 text-sm text-text-primary hover:bg-bg cursor-pointer mention-item${i === 0 ? ' bg-bg' : ''}" data-id="${id}"><span class="text-accent">@</span>${id}</div>`
+      `<div class="px-3 py-2 text-sm text-text-primary hover:bg-bg cursor-pointer mention-item${i === 0 ? ' bg-bg' : ''}" data-id="${id}"><span class="text-accent">@</span>${escapeHtml(displayName(id))}<span class="text-xs text-muted ml-2">${escapeHtml(id)}</span></div>`
     ).join('')
     dropdown.classList.remove('hidden')
   }
@@ -1121,7 +1128,7 @@ function renderChips() {
   container.innerHTML = selectedParticipants.map((p, i) => {
     const color = senderColor(p.id)
     return `<span class="inline-flex items-center gap-1 bg-border/50 text-xs px-2 py-0.5 rounded-md font-mono" style="color:${color}">
-      ${escapeHtml(p.id)}
+      ${escapeHtml(displayName(p.id))}
       <input class="bg-transparent border-none outline-none text-text-secondary w-16 text-xs placeholder:text-muted/50" placeholder="role" value="${escapeHtml(p.role || '')}" onchange="updateParticipantRole(${i}, this.value)" onclick="event.stopPropagation()" />
       <span class="cursor-pointer opacity-60 hover:opacity-100" onclick="removeParticipant(${i})">&times;</span>
     </span>`
@@ -1158,8 +1165,8 @@ function renderParticipantDropdown(filter) {
   let html = filtered.map(p => {
     const roleClass = p.role === 'human' ? 'text-blue-400' : 'text-accent'
     return `<div class="px-3 py-2 hover:bg-border/30 cursor-pointer flex items-center justify-between" onclick="addParticipant('${escapeHtml(p.id)}')">
-      <span class="text-sm font-mono">${escapeHtml(p.id)}</span>
-      <span class="text-xs ${roleClass}">${p.role}</span>
+      <span class="text-sm font-mono">${escapeHtml(p.display_name || p.id)}</span>
+      <span class="text-xs text-muted font-mono">${escapeHtml(p.id)}</span>
     </div>`
   }).join('')
   if (filter && !allProfiles.some(p => p.id === filter) && !selectedIds.includes(filter)) {
